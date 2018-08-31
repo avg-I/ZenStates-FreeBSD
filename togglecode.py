@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 import portio
 
 portio.iopl(3)

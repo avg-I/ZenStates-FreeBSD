@@ -1,36 +1,34 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 import struct
 import os
 import glob
 import argparse
+import fcntl
 
 pstates = range(0xC0010064, 0xC001006C)
 
 def writemsr(msr, val, cpu = -1):
     try:
         if cpu == -1:
-            for c in glob.glob('/dev/cpu/[0-9]*/msr'):
+            for c in glob.glob('/dev/cpuctl[0-9]*'):
                 f = os.open(c, os.O_WRONLY)
-                os.lseek(f, msr, os.SEEK_SET)
-                os.write(f, struct.pack('Q', val))
+                fcntl.ioctl(f, 0xc0106302, struct.pack('@IQ', msr, val))
                 os.close(f)
         else:
-            f = os.open('/dev/cpu/%d/msr' % (cpu), os.O_WRONLY)
-            os.lseek(f, msr, os.SEEK_SET)
-            os.write(f, struct.pack('Q', val))
+            f = os.open('/dev/cpuctl%d' % (cpu), os.O_WRONLY)
+            fcntl.ioctl(f, 0xc0106302, struct.pack('@IQ', msr, val))
             os.close(f)
     except:
-        raise OSError("msr module not loaded (run modprobe msr)")
+        raise OSError("cpuctl module not loaded (run kldload cpuctl)")
 
 def readmsr(msr, cpu = 0):
     try:
-        f = os.open('/dev/cpu/%d/msr' % cpu, os.O_RDONLY)
-        os.lseek(f, msr, os.SEEK_SET)
-        val = struct.unpack('Q', os.read(f, 8))[0]
+        f = os.open('/dev/cpuctl%d' % cpu, os.O_RDONLY)
+        val = struct.unpack('QQ', fcntl.ioctl(f, 0xc0106301, struct.pack('@IQ', msr, 0)))[1]
         os.close(f)
         return val
     except:
-        raise OSError("msr module not loaded (run modprobe msr)")
+        raise OSError("cpuctl module not loaded (run kldload cpuctl)")
 
 def pstate2str(val):
     if val & (1 << 63):
@@ -98,7 +96,7 @@ if args.pstate >= 0:
     if new != old:
         if not (readmsr(0xC0010015) & (1 << 21)):
             print('Locking TSC frequency')
-            for c in range(len(glob.glob('/dev/cpu/[0-9]*/msr'))):
+            for c in range(len(glob.glob('/dev/cpuctl[0-9]*'))):
                 writemsr(0xC0010015, readmsr(0xC0010015, c) | (1 << 21), c)
         print('New P' + str(args.pstate) + ': ' + pstate2str(new))
         writemsr(pstates[args.pstate], new)
