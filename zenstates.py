@@ -116,11 +116,11 @@ if args.pstate >= 0:
         writemsr(pstates[args.pstate], new)
 
 if args.cc6_enable:
-    writemsr(0xC0010292, readmsr(0xC0010292) | (1 << 32))
+    writemsr(0xC0010296, readmsr(0xC0010296) | ((1 << 22) | (1 << 14) | (1 << 6)))
     print('Enabling Core C6 state')
 
 if args.cc6_disable:
-    writemsr(0xC0010292, readmsr(0xC0010292) & ~(1 << 32))
+    writemsr(0xC0010296, readmsr(0xC0010296) & ~((1 << 22) | (1 << 14) | (1 << 6)))
     print('Disabling Core C6 state')
 
 if args.pc6_enable:
